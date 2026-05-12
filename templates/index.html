@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Career Assistant Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+ 
+<!-- TOP BAR -->
+<div class="topbar">
+    <div class="topbar-left">
+        <span class="logo-dot"></span>
+        <span class="logo-text">CareerAI</span>
+        <span class="status-pill">● Live</span>
+    </div>
+    <div class="topbar-right">
+        <span id="username-display" class="user-chip">👤 Guest</span>
+        <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+</div>
+ 
+<div class="app">
+ 
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-section">
+            <p class="sidebar-label">QUICK ACTIONS</p>
+            <button class="quick-btn" onclick="quickMsg('Give me a step-by-step DSA roadmap for placements')">
+                <span class="btn-icon">📊</span> DSA Roadmap
+            </button>
+            <button class="quick-btn" onclick="quickMsg('How to build a strong resume for software engineering internships in 2026?')">
+                <span class="btn-icon">📄</span> Resume Tips
+            </button>
+            <button class="quick-btn" onclick="quickMsg('How to prepare for technical interviews at product-based companies?')">
+                <span class="btn-icon">💡</span> Interview Prep
+            </button>
+            <button class="quick-btn" onclick="quickMsg('Explain GenAI and how to use it in projects for freshers')">
+                <span class="btn-icon">🤖</span> GenAI Basics
+            </button>
+            <button class="quick-btn" onclick="quickMsg('How to get a software internship in 2026 with no experience?')">
+                <span class="btn-icon">💼</span> Internship Guide
+            </button>
+        </div>
+ 
+        <div class="sidebar-divider"></div>
+ 
+        <div class="sidebar-section">
+            <p class="sidebar-label">RESUME ANALYZER</p>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📋</div>
+                <p class="upload-text">Drop your PDF resume here</p>
+                <input type="file" id="resumeFile" accept=".pdf" onchange="handleFileSelect(this)">
+                <button class="upload-btn" onclick="document.getElementById('resumeFile').click()">
+                    Choose PDF
+                </button>
+                <p class="file-name" id="fileName">No file selected</p>
+                <button class="analyze-btn" id="analyzeBtn" onclick="uploadResume()" style="display:none">
+                    ⚡ Analyze Resume
+                </button>
+            </div>
+        </div>
+ 
+        <div class="sidebar-divider"></div>
+ 
+        <div class="sidebar-section">
+            <button class="voice-btn" onclick="startVoice()" id="voiceBtn">
+                🎤 Voice Input
+            </button>
+            <button class="clear-btn" onclick="clearChat()">
+                🗑️ Clear Chat
+            </button>
+        </div>
+    </div>
+ 
+    <!-- MAIN CHAT AREA -->
+    <div class="main">
+        <!-- Welcome Message -->
+        <div id="welcomeScreen" class="welcome-screen">
+            <div class="welcome-content">
+                <div class="welcome-badge">AI-POWERED</div>
+                <h1 class="welcome-title">Career Assistant</h1>
+                <p class="welcome-sub">Your intelligent guide for DSA, Resume Building, Interviews & Job Prep</p>
+                <div class="welcome-chips">
+                    <span onclick="quickMsg('How to crack placements at top tech companies?')">🎯 Crack Placements</span>
+                    <span onclick="quickMsg('Review my skills: Python, ML, Flask. What jobs suit me?')">🔍 Skill Analysis</span>
+                    <span onclick="quickMsg('What are the top skills to learn in 2026 for software jobs?')">📈 2026 Skills</span>
+                </div>
+            </div>
+        </div>
+ 
+        <div id="chatbox"></div>
+ 
+        <div id="resultBox"></div>
+ 
+        <!-- Input Area -->
+        <div class="inputbox">
+            <div class="input-wrapper">
+                <input
+                    type="text"
+                    id="userInput"
+                    placeholder="Ask anything about your career..."
+                    onkeydown="if(event.key==='Enter') sendMessage()"
+                    autocomplete="off"
+                >
+                <button class="send-btn" onclick="sendMessage()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+            <p class="input-hint">Press Enter to send • 🎤 Voice supported</p>
+        </div>
+    </div>
+</div>
+ 
+<!-- Typing indicator template -->
+<template id="typingTpl">
+    <div class="bot typing-indicator" id="typingDot">
+        <span></span><span></span><span></span>
+    </div>
+</template>
+ 
+<script>
+// =====================
+// INIT
+// =====================
+window.onload = () => {
+    const stored = localStorage.getItem("career_username");
+    if (stored) {
+        document.getElementById("username-display").textContent = "👤 " + stored;
+    }
+};
+ 
+// =====================
+// SEND MESSAGE
+// =====================
+async function sendMessage() {
+    const input = document.getElementById("userInput");
+    const message = input.value.trim();
+    if (!message) return;
+ 
+    // Hide welcome screen
+    document.getElementById("welcomeScreen").style.display = "none";
+ 
+    addMessage("user", message);
+    input.value = "";
+ 
+    showTyping();
+ 
+    try {
+        const res = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        removeTyping();
+        addMessage("bot", data.reply);
+    } catch (err) {
+        removeTyping();
+        addMessage("bot", "⚠️ Server error. Please try again.");
+    }
+}
+ 
+// =====================
+// QUICK MESSAGES
+// =====================
+function quickMsg(text) {
+    document.getElementById("welcomeScreen").style.display = "none";
+    document.getElementById("userInput").value = text;
+    sendMessage();
+}
+ 
+// =====================
+// ADD MESSAGE
+// =====================
+function addMessage(type, text) {
+    const box = document.getElementById("chatbox");
+    const div = document.createElement("div");
+    div.className = type;
+ 
+    if (type === "bot") {
+        // Convert markdown-like formatting
+        div.innerHTML = formatText(text);
+    } else {
+        div.textContent = text;
+    }
+ 
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+ 
+// =====================
+// FORMAT BOT TEXT
+// =====================
+function formatText(text) {
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code>$1</code>')
+        .replace(/📌|🎯|✅|⚠️|💼|📈|✔️/g, '<br>$&')
+        .replace(/\n/g, '<br>');
+}
+ 
+// =====================
+// TYPING INDICATOR
+// =====================
+function showTyping() {
+    const box = document.getElementById("chatbox");
+    const tpl = document.getElementById("typingTpl").content.cloneNode(true);
+    box.appendChild(tpl);
+    box.scrollTop = box.scrollHeight;
+}
+ 
+function removeTyping() {
+    const t = document.getElementById("typingDot");
+    if (t) t.remove();
+}
+ 
+// =====================
+// FILE SELECT
+// =====================
+function handleFileSelect(input) {
+    const file = input.files[0];
+    if (file) {
+        document.getElementById("fileName").textContent = "📎 " + file.name;
+        document.getElementById("analyzeBtn").style.display = "block";
+    }
+}
+ 
+// =====================
+// RESUME UPLOAD
+// =====================
+async function uploadResume() {
+    const file = document.getElementById("resumeFile").files[0];
+    if (!file) { alert("Please select a PDF file first"); return; }
+ 
+    const resultBox = document.getElementById("resultBox");
+    resultBox.innerHTML = `<div class="analyzing-msg">⚡ Analyzing your resume with AI...</div>`;
+    resultBox.scrollIntoView({ behavior: "smooth" });
+ 
+    const formData = new FormData();
+    formData.append("file", file);
+ 
+    try {
+        const res = await fetch("/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        resultBox.innerHTML = `
+            <div class="result-card">
+                <div class="result-header">
+                    <span>📊 Resume Analysis Report</span>
+                    <button onclick="document.getElementById('resultBox').innerHTML=''" class="close-result">✕</button>
+                </div>
+                <div class="result-body">${formatText(data.result)}</div>
+            </div>`;
+    } catch (err) {
+        resultBox.innerHTML = `<div class="analyzing-msg">⚠️ Upload failed. Try again.</div>`;
+    }
+}
+ 
+// =====================
+// CLEAR CHAT
+// =====================
+async function clearChat() {
+    document.getElementById("chatbox").innerHTML = "";
+    document.getElementById("resultBox").innerHTML = "";
+    document.getElementById("welcomeScreen").style.display = "flex";
+    await fetch("/clear", { method: "POST" });
+}
+ 
+// =====================
+// VOICE INPUT
+// =====================
+function startVoice() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert("❌ Use Chrome for voice input."); return; }
+ 
+    const btn = document.getElementById("voiceBtn");
+    const recognition = new SR();
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+ 
+    recognition.onstart = () => { btn.textContent = "🔴 Listening..."; btn.classList.add("recording"); };
+    recognition.onresult = (e) => { document.getElementById("userInput").value = e.results[0][0].transcript; };
+    recognition.onend = () => { btn.textContent = "🎤 Voice Input"; btn.classList.remove("recording"); };
+    recognition.onerror = () => { btn.textContent = "🎤 Voice Input"; btn.classList.remove("recording"); };
+ 
+    recognition.start();
+}
+ 
+// =====================
+// THEME TOGGLE
+// =====================
+function toggleTheme() {
+    document.body.classList.toggle("light");
+    const btn = document.querySelector(".icon-btn");
+    btn.textContent = document.body.classList.contains("light") ? "☀️" : "🌙";
+}
+</script>
+</body>
+</html>
+ 
