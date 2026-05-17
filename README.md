@@ -1,4 +1,4 @@
-# 🤖 AI Career Assistant (Flask + Google Gemini AI)
+# 🤖 AI Career Assistant (Flask + Google Gemini API)
 
 An intelligent AI-powered web application designed to help students with **career guidance, resume analysis, DSA preparation, interview readiness, and job support** using Google Gemini AI.
 
